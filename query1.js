@@ -8,6 +8,13 @@ function find_user(city, dbname) {
     let results = [];
     // TODO: find all users who live in city
     // db.users.find(...);
+    // Find users with the specified hometown city
+    var cursor = db.users.find({ "hometown.city": city });
+
+    // Iterate over the cursor and extract user ids
+    cursor.forEach(function(doc) {
+        results.push(doc.user_id);
+    });
 
     // See test.js for a partial correctness check.
 
