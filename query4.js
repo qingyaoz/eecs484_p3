@@ -20,30 +20,34 @@ function suggest_friends(year_diff, dbname) {
     let pairs = [];
     // TODO: implement suggest friends
     // Step 1: Retrieve male and female users separately
-    var males = db.users.find(
-        { gender: "male" },
-        { user_id: 1, YOB: 1, "hometown.city": 1, friends: 1 }
-    );
-    var females = db.users.find(
-        { gender: "female" },
-        { user_id: 1, YOB: 1, "hometown.city": 1, friends: 1 }
-    );
-    males.forEach((male) => {
-        females.forEach((female) => {
+    // var males = db.users.find(
+    //     { gender: "male" }
+    //     //{ user_id: 1, YOB: 1, "hometown.city": 1, friends: 1 }
+    // );
+    // var females = db.users.find(
+    //     { gender: "female" }
+    //     //{ user_id: 1, YOB: 1, "hometown.city": 1, friends: 1 }
+    // );
+    // let count = 0;
+    db.users.find({ gender: "male" }).forEach((male) => {
+        //print(male.user_id);
+        db.users.find({ gender: "female" }).forEach((female) => {
             // Check YOB difference
+            //print([male.user_id, female.user_id]);
             if (Math.abs(male.YOB - female.YOB) < year_diff) {
-            // Check if not friends
+                // Check if not friends
+                // print(count);
+                // count++;
                 if (
-                    (!male.friends ||
-                        male.friends.indexOf(female.user_id) == -1) &&
-                    (!female.friends ||
-                        female.friends.indexOf(male.user_id) == -1) &&
-                    male.hometown.city &&
-                    female.hometown.city &&
-                    male.hometown.city === female.hometown.city
+                    (
+                        male.friends.indexOf(female.user_id) === -1) &&
+                    (
+                        female.friends.indexOf(male.user_id) === -1) &&
+                    male.hometown.city == female.hometown.city
                     ) {
                     // Check if from the same hometown city
                     // Add the pair
+                    //print([male.user_id, female.user_id]);
                     pairs.push([male.user_id, female.user_id]);
                 }
             }
