@@ -21,7 +21,7 @@ function oldest_friend(dbname) {
     //             friends: "$user_id"
     //         }
     //     },
-    //     { $out: "flat_user" } 
+    //     { $out: "flat_user" }
     // ]);
 
     // db.users.aggregate([
@@ -73,10 +73,42 @@ function oldest_friend(dbname) {
     //         results[new_user.user_id] = new_user.oldestFriendID;
     //     }
     // });
+    db.users.aggregate([
+        { $unwind: "$friends" },
+        {
+            $project: {
+                _id: 0, // do not show the default _id
+                user_id: "$user_id",
+                friends: "$friends"
+            }
+        },
+        { $out: "flat_users" } // output results to flat_users collection
+    ]);
+    
+    db.flat_users.find().forEach((row) => {
+        flat_users.insertOne([row.friend_id, row.user_id]);
+    });
+
+    db.flat_users.aggregate([
+        {
+            $group: {
+                _id: "$user_id", 
+                users: { $addToSet: "$friends" } 
+            }
+        },
+        {
+            $out: "all_friends"
+        }
+    ]);
+
+    db.flat_users.find().forEach((row) => {
+        { $sort: { YOB: 1 } }
+    });
+
     var oldestFriends = db.users.aggregate([
         {
             $lookup: {
-                from: "users", // 关联的集合名
+                from: "flat_users", // 关联的集合名
                 localField: "friends", // 当前集合中用于关联的字段
                 foreignField: "user_id", // 关联集合中的字段
                 as: "friendDetails" // 关联后存储的字段名
