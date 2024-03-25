@@ -32,7 +32,7 @@ function users_born_by_month(dbname) {
     {
     	$project: {
         _id: 0,
-        month: "$_id", // Rename _id to month
+        MOB: "$_id", // Rename _id to month
         borncount: 1,
     	},
     },
