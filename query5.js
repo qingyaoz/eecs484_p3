@@ -82,48 +82,48 @@ function oldest_friend(dbname) {
                 friends: "$friends"
             }
         },
-        { $out: "flat_users" } // output results to flat_users collection
+        { $out: "f_users" } // output results to flat_users collection
     ]);
     
-    db.flat_users.find().forEach((row) => {
-        flat_users.insertOne([row.friend_id, row.user_id]);
+    db.f_users.find().forEach((row) => {
+        f_users.insertOne([row.friend_id, row.user_id]);
     });
 
-    db.flat_users.aggregate([
+    db.f_users.aggregate([
         {
             $group: {
-                _id: "$user_id", 
-                users: { $addToSet: "$friends" } 
-            }
+            _id: "$user_id",
+            users: { $addToSet: "$friends" },
+            },
         },
         {
-            $out: "all_friends"
-        }
+            $out: "all_friends",
+        },
     ]);
 
-    db.flat_users.find().forEach((row) => {
-        { $sort: { YOB: 1 } }
-    });
+    // db.flat_users.find().forEach((row) => {
+    //     { $sort: { YOB: 1 } }
+    // });
 
     var oldestFriends = db.users.aggregate([
-        {
-            $lookup: {
-                from: "flat_users", // 关联的集合名
-                localField: "friends", // 当前集合中用于关联的字段
-                foreignField: "user_id", // 关联集合中的字段
-                as: "friendDetails" // 关联后存储的字段名
-            }
+      {
+        $lookup: {
+          from: "all_friends", // 关联的集合名
+          localField: "friends", // 当前集合中用于关联的字段
+          foreignField: "user_id", // 关联集合中的字段
+          as: "friendDetails", // 关联后存储的字段名
         },
-        {
-            $project: {
-                _id: 0,
-                user_id: "$user_id",
-                oldestFriendYOB: { $min: "$friendDetails.YOB" }, // 选择朋友中YOB最小的
-                oldestFriendID: { $min: "$friendDetails.user_id" } // 选择朋友中user_id最小的
-            }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: "$user_id",
+          oldestFriendYOB: { $min: "$friendDetails.YOB" }, // 选择朋友中YOB最小的
+          oldestFriendID: { $min: "$friendDetails.user_id" }, // 选择朋友中user_id最小的
         },
-        // 根据用户ID升序排序
-        { $sort: { user_id: 1 } }
+      },
+      // 根据用户ID升序排序
+      { $sort: { user_id: 1 } },
     ]);
 
     // 将结果转换为JSON对象
