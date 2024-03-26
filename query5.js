@@ -12,6 +12,7 @@ function oldest_friend(dbname) {
 
   let results = {};
   
+  // ------------- Prepare: flat users's friends -------------
   db.users.aggregate([
       { $unwind: "$friends" },
       {
@@ -24,6 +25,8 @@ function oldest_friend(dbname) {
       { $out: "f_users" } // output results to flat_users collection
   ]);
   
+  // ------------- Prepare: make friends bi-directional -------------
+  // ---- By For-Loop ----
   db.f_users.find().forEach((row) => {
       db.f_users.insertOne({ user_id: row.friends, friends: row.user_id });
   });
@@ -45,6 +48,7 @@ function oldest_friend(dbname) {
     {$out: "all_friends"}
   ]);
 
+  // Link to user to get YOB
   db.all_friends.aggregate([
     {
       $lookup: {
@@ -68,20 +72,69 @@ function oldest_friend(dbname) {
     }
   ]);
   
-  db.all_friends.find().forEach(function(doc) {
-    var temp = doc.friendDetails[0].user_id;
-    var yob = doc.friendDetails[0].YOB;
-    for (i = 1; i < doc.friendDetails.length; i++) {
-      if (doc.friendDetails[i].YOB < yob) {
-        yob = doc.friendDetails[i].YOB;
-        temp =  doc.friendDetails[i].user_id;
-      } else if (doc.friendDetails[i].YOB == yob) {
-        if (doc.friendDetails[i].user_id < temp) {
-          temp = doc.friendDetails[i].user_id;
+  // ------------- Find Oldest Friend -------------
+  // By For-Loop
+  // db.all_friends.find().forEach(function(doc) {
+  //   var temp = doc.friendDetails[0].user_id;
+  //   var yob = doc.friendDetails[0].YOB;
+  //   for (i = 1; i < doc.friendDetails.length; i++) {
+  //     if (doc.friendDetails[i].YOB < yob) {
+  //       yob = doc.friendDetails[i].YOB;
+  //       temp =  doc.friendDetails[i].user_id;
+  //     } else if (doc.friendDetails[i].YOB == yob) {
+  //       if (doc.friendDetails[i].user_id < temp) {
+  //         temp = doc.friendDetails[i].user_id;
+  //       }
+  //     }
+  //   }
+  //   results[doc.user_id] = temp;
+  // });
+
+  // By Aggregate
+  db.all_friends.aggregate([
+    {
+      $lookup: {
+        from: "users",
+        localField: "friends",
+        foreignField: "user_id",
+        as: "friendDetails"
+      }
+    },
+    {
+      $project: {
+        user_id: 1,
+        oldest_friend: {
+          $min: {
+            $map: {
+              input: "$friendDetails",
+              as: "friend",
+              in: {
+                $cond: [
+                  { $eq: ["$$friend.YOB", { $min: "$friendDetails.YOB" }] },
+                  "$$friend.user_id",
+                  undefined
+                ]
+              }
+            }
+          }
         }
       }
+    },
+    {
+      $group: {
+        _id: "$user_id",
+        oldest_friend: { $first: "$oldest_friend" }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        user_id: "$_id",
+        oldest_friend: 1
+      }
     }
-    results[doc.user_id] = temp;
+  ]).forEach(doc => {
+    results[doc.user_id] = doc.oldest_friend;
   });
   
   return results;
