@@ -75,7 +75,7 @@ function oldest_friend(dbname) {
       if (doc.friendDetails[i].YOB < yob) {
         yob = doc.friendDetails[i].YOB;
         temp =  doc.friendDetails[i].user_id;
-      } else if (doc.friendDetails[i].YOB = yob) {
+      } else if (doc.friendDetails[i].YOB == yob) {
         if (doc.friendDetails[i].user_id < temp) {
           temp = doc.friendDetails[i].user_id;
         }
